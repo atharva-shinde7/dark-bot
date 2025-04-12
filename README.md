@@ -8,7 +8,7 @@
   ![Platform](https://img.shields.io/badge/Platform-WhatsApp-brightgreen)
   ![Made with](https://img.shields.io/badge/Made%20with-Baileys-purple)
   ![Status](https://img.shields.io/badge/Status-Active-success)
-  ![Version](https://img.shields.io/badge/Version-2.0-blue)
+  ![Version](https://img.shields.io/badge/Version-2.1-blue)
 </div>
 
 ## 🌟 Unique Features
@@ -23,8 +23,10 @@
 ### 🤖 AI & Tools
 - **!ai** - Powered by Google's Gemini AI for intelligent conversations
 - **!image** - Generate stunning AI images using advanced models
+- **!vision** - Analyze images with Gemini Vision AI (reply to an image)
 - **!summarize** - Smart summarization of articles, videos, and text
 - **!translate** - Break language barriers with accurate translations
+- **!docchat** - Chat with documents, ask questions about PDFs and text files
 
 ### 📱 Media & Downloads
 - **!ytdl** - Download YouTube videos (MP3/MP4)
@@ -115,7 +117,7 @@
 - Python 3.8+ (for AI features)
 - Active WhatsApp account
 - API Keys:
-  - Google Gemini AI
+  - Google Gemini AI (for chat and vision features)
   - OpenWeatherMap
   - News API
   - Image Generation API
@@ -124,7 +126,7 @@
 
 - **Backend**: Node.js, Python
 - **WhatsApp Library**: @whiskeysockets/baileys
-- **AI/ML**: Google Gemini, HuggingFace
+- **AI/ML**: Google Gemini (Chat & Vision), HuggingFace
 - **Image Processing**: Sharp
 - **Additional**: 
   - Axios for HTTP requests
