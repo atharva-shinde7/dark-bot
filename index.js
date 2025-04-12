@@ -1,5 +1,5 @@
 const fs = require('fs')
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } = require('@whiskeysockets/baileys')
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage, downloadMediaMessage } = require('@whiskeysockets/baileys')
 const pino = require('pino')
 const qrcode = require('qrcode-terminal')
 const getJoke = require('./lib/joke')
@@ -22,6 +22,8 @@ const handleDocChat = require('./lib/docchat');
 const getLyrics = require('./lib/lyricsFetcher');
 const { askGemini } = require('./lib/gemini');
 const visionHandler = require('./lib/vision');
+const { analyzeVideo } = require('./lib/video_analyzer');
+
 
 
 require('dotenv').config();
@@ -404,6 +406,7 @@ const startBot = async () => {
             • !ai <query> — Ask anything to Gemini AI  
             • !image <prompt> — Generate image with AI  
             • !vision — Analyze images with AI (reply to an image)  
+            • !analyzevideo — Extract insights from videos
             • !summarize <text/url> — Summarize articles or YouTube  
             • !translate <lang> <text> — Translate text  
             
@@ -1041,6 +1044,54 @@ const startBot = async () => {
                 await visionHandler(msg, sock, from); 
             }
             
+            if (body.startsWith('!analyzevideo')) {
+                try {
+                  // Check if this is a quoted video or direct video message
+                  const videoMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage
+                               || msg.message?.videoMessage;
+                  
+                  if (!videoMsg) {
+                    await sock.sendMessage(from, { text: "📼 Reply to a video with !analyzevideo or send a video with caption !analyzevideo" });
+                    return;
+                  }
+              
+                  // Send processing message
+                  await sock.sendMessage(from, { text: "⏳ Analyzing video, please wait... This may take some time depending on the video length." });
+                  
+                  // Download the video
+                  const buffer = await downloadMediaMessage(
+                    {
+                      message: { videoMessage: videoMsg },
+                      key: msg.key
+                    },
+                    "buffer"
+                  );
+                  
+                  // Ensure temp directory exists
+                  if (!fs.existsSync('./temp')) {
+                    fs.mkdirSync('./temp', { recursive: true });
+                  }
+                  
+                  // Save the video temporarily
+                  const fileName = `./temp/video_${Date.now()}.mp4`;
+                  fs.writeFileSync(fileName, buffer);
+              
+                  // Import the analyzer module
+                  const { analyzeVideo } = require('./lib/video_analyzer');
+                  
+                  // Analyze the video
+                  const result = await analyzeVideo(fileName);
+                  await sock.sendMessage(from, { text: result || "⚠️ Couldn't analyze this video." });
+              
+                  // Clean up
+                  if (fs.existsSync(fileName)) {
+                    fs.unlinkSync(fileName);
+                  }
+                } catch (err) {
+                  console.error("Video Analysis Error:", err);
+                  await sock.sendMessage(from, { text: "❌ Error analyzing video. Make sure ffmpeg is installed on your system." });
+                }
+            }
             
             
         } catch (error) {

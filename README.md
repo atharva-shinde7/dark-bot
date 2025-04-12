@@ -24,6 +24,7 @@
 - **!ai** - Powered by Google's Gemini AI for intelligent conversations
 - **!image** - Generate stunning AI images using advanced models
 - **!vision** - Analyze images with Gemini Vision AI (reply to an image)
+- **!analyzevideo** - Extract insights from videos using frame-by-frame analysis
 - **!summarize** - Smart summarization of articles, videos, and text
 - **!translate** - Break language barriers with accurate translations
 - **!docchat** - Chat with documents, ask questions about PDFs and text files
