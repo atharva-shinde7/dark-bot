@@ -23,7 +23,7 @@ const getLyrics = require('./lib/lyricsFetcher');
 const { askGemini } = require('./lib/gemini');
 const visionHandler = require('./lib/vision');
 const { analyzeVideo } = require('./lib/video_analyzer');
-
+const { generateVideoFromPrompt } = require('./lib/videogen');
 
 
 require('dotenv').config();
@@ -407,6 +407,7 @@ const startBot = async () => {
             • !image <prompt> — Generate image with AI  
             • !vision — Analyze images with AI (reply to an image)  
             • !analyzevideo — Extract insights from videos
+            • !videogen <prompt> — Generate AI videos
             • !summarize <text/url> — Summarize articles or YouTube  
             • !translate <lang> <text> — Translate text  
             
@@ -1092,15 +1093,84 @@ const startBot = async () => {
                   await sock.sendMessage(from, { text: "❌ Error analyzing video. Make sure ffmpeg is installed on your system." });
                 }
             }
+
+            if (body.startsWith('!videogen')) {
+                const query = body.slice(10).trim();
+                if (!query) {
+                  await sock.sendMessage(from, { text: "🎥 Please provide a prompt. Example: `!videogen a panda dancing in space`" });
+                  return;
+                }
+            
+                await sock.sendMessage(from, { text: "⏳ Generating your video with Dream Machine... This may take a minute." });
+            
+                try {
+                  const { generateVideoFromPrompt } = require('./lib/videogen');
+                  
+                  // First send a detailed status message
+                  await sock.sendMessage(from, { 
+                    text: "🎬 Generating AI video...\n\n" +
+                          "⏳ This process takes 30-60 seconds\n" +
+                          "🔄 Creating a short video from your prompt\n" +
+                          "🧠 Using Stability AI's video generation\n\n" +
+                          "⚠️ Note: This feature requires billing setup on Replicate.com"
+                  });
+                  
+                  const videoPath = await generateVideoFromPrompt(query);
+                  
+                  // Send the video file
+                  await sock.sendMessage(from, {
+                    video: { url: videoPath },
+                    caption: `🎬 Here's your AI video for: "${query}"`,
+                    gifPlayback: false
+                  }, { quoted: msg });
+                  
+                  // Clean up the temporary file after sending
+                  setTimeout(() => {
+                    try {
+                      if (fs.existsSync(videoPath)) {
+                        fs.unlinkSync(videoPath);
+                        console.log(`Deleted temporary video file: ${videoPath}`);
+                      }
+                    } catch (cleanupError) {
+                      console.error("Failed to delete temporary video file:", cleanupError);
+                    }
+                  }, 10000); // Wait 10 seconds to ensure the file is sent
+                  
+                } catch (err) {
+                  console.error(err);
+                  // Get more details from the error
+                  let errorMsg = "❌ Failed to generate video.";
+                  
+                  // Special handling for billing-related errors
+                  if (err.message && err.message.includes("billing")) {
+                    errorMsg = "❌ This feature requires billing setup.\n\n" +
+                               "To use AI video generation, you need to set up billing on Replicate:\n" +
+                               "1. Go to https://replicate.com/account/billing\n" +
+                               "2. Add a payment method\n" +
+                               "3. Then try again with !videogen";
+                  } else if (err.response && err.response.data) {
+                    errorMsg += `\n\nAPI Error: ${err.response.data.detail || err.response.data.title || "Unknown API error"}`;
+                  } else if (err.message) {
+                    errorMsg += `\n\nError: ${err.message}`;
+                  }
+                  
+                  await sock.sendMessage(from, { text: errorMsg });
+                }
+            }
+    
             
             
         } catch (error) {
             console.error("Error processing message:", error);
-            const chatId = msg?.key?.remoteJid;
-            if (chatId) {
-                await sock.sendMessage(chatId, { 
-                    text: "❌ Error processing message. Please try again later." 
-                }, { quoted: msg });
+            try {
+                // Only try to send an error message if we have a valid message object
+                if (typeof msg !== 'undefined' && msg?.key?.remoteJid) {
+                    await sock.sendMessage(msg.key.remoteJid, { 
+                        text: "❌ Error processing message. Please try again later." 
+                    }, { quoted: msg });
+                }
+            } catch (sendError) {
+                console.error("Failed to send error message:", sendError);
             }
         }
     })

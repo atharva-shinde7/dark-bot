@@ -25,6 +25,7 @@
 - **!image** - Generate stunning AI images using advanced models
 - **!vision** - Analyze images with Gemini Vision AI (reply to an image)
 - **!analyzevideo** - Extract insights from videos using frame-by-frame analysis
+- **!videogen** - Create true AI videos from text prompts (requires Replicate billing setup)
 - **!summarize** - Smart summarization of articles, videos, and text
 - **!translate** - Break language barriers with accurate translations
 - **!docchat** - Chat with documents, ask questions about PDFs and text files
@@ -119,6 +120,7 @@
 - Active WhatsApp account
 - API Keys:
   - Google Gemini AI (for chat and vision features)
+  - Replicate API (for video generation, requires payment method setup)
   - OpenWeatherMap
   - News API
   - Image Generation API
