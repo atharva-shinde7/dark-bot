@@ -20,6 +20,8 @@ const getLiveCricketScore = require("./lib/cricketScore");
 const getSongAudio = require('./lib/songDownloader');
 const handleDocChat = require('./lib/docchat');
 const getLyrics = require('./lib/lyricsFetcher');
+const { askGemini } = require('./lib/gemini');
+const visionHandler = require('./lib/vision');
 
 
 require('dotenv').config();
@@ -176,7 +178,6 @@ const startBot = async () => {
             if (body.startsWith('!ai')) {
                 try {
                     const prompt = body.slice(3).trim();
-                    const askGemini = require('./lib/gemini');
                     const response = await askGemini(msg.key.remoteJid, prompt);
                     await sock.sendMessage(msg.key.remoteJid, { text: response });
                 } catch (error) {
@@ -402,6 +403,7 @@ const startBot = async () => {
             🧠 𝗔𝗜 & 𝗧𝗢𝗢𝗟𝗦:
             • !ai <query> — Ask anything to Gemini AI  
             • !image <prompt> — Generate image with AI  
+            • !vision — Analyze images with AI (reply to an image)  
             • !summarize <text/url> — Summarize articles or YouTube  
             • !translate <lang> <text> — Translate text  
             
@@ -1033,6 +1035,10 @@ const startBot = async () => {
                         text: "❌ Error processing document. Please make sure the document is in a supported format (PDF, TXT, DOC) and try again." 
                     }, { quoted: msg });
                 }
+            }
+
+            if (body.startsWith('!vision')) {
+                await visionHandler(msg, sock, from); 
             }
             
             
