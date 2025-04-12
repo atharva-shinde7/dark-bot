@@ -24,9 +24,10 @@ const { askGemini } = require('./lib/gemini');
 const visionHandler = require('./lib/vision');
 const { analyzeVideo } = require('./lib/video_analyzer');
 const { generateVideoFromPrompt } = require('./lib/videogen');
-
-
+const getAnimeImage = require('./lib/animeImage');
+const getAnimeCharacterImage = require('./lib/animeCharacter');
 require('dotenv').config();
+const getPinterestImage = require("./lib/imagechar");
 
 
 // Message cache to store recent messages
@@ -1157,9 +1158,62 @@ const startBot = async () => {
                   await sock.sendMessage(from, { text: errorMsg });
                 }
             }
-    
+
+            if (body.startsWith('!animechar')) {
+                try {
+                    // Extract character name from command
+                    const characterName = body.slice(10).trim();
+                    
+                    if (!characterName || characterName.length < 2) {
+                        await sock.sendMessage(from, { 
+                            text: "⚠️ Please provide a character name. Example: `!animechar naruto`" 
+                        }, { quoted: msg });
+                        return;
+                    }
+                    
+                    // Send processing message
+                    await sock.sendMessage(from, { text: `🔍 Finding ${characterName} for you...` });
+                    
+                    // Get character image
+                    const imageUrl = await getAnimeCharacterImage(characterName);
+                    
+                    // Send the image
+                    await sock.sendMessage(from, {
+                        image: { url: imageUrl },
+                        caption: `✨ Here's ${characterName} for you!`
+                    }, { quoted: msg }).catch(async (sendError) => {
+                        console.error("Error sending character image:", sendError.message);
+                        // Try without quoting the message if that fails
+                        await sock.sendMessage(from, {
+                            image: { url: imageUrl },
+                            caption: `✨ Here's ${characterName} for you!`
+                        });
+                    });
+                    
+                } catch (err) {
+                    console.error("Anime character image error:", err.message);
+                    
+                    // Send a more friendly error message
+                    await sock.sendMessage(from, { 
+                        text: `❌ I couldn't find ${body.slice(10).trim()}. Try with a more popular anime character like naruto, goku, or waifu.` 
+                    }, { quoted: msg });
+                }
+            }
             
+            if (body.startsWith("!marvel ")) {
+                const character = body.slice(8).trim();
+                const img = await getPinterestImage(`${character} marvel`);
+              
+                await sock.sendMessage(
+                  msg.key.remoteJid,
+                  img
+                    ? { image: { url: img }, caption: `Here's a random Marvel image of ${character}` }
+                    : { text: `Couldn't find any Marvel image for "${character}" 😢` },
+                  { quoted: msg }
+                );
+            }
             
+            // Handle character names beginning with exclamation mark (!)
         } catch (error) {
             console.error("Error processing message:", error);
             try {

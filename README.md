@@ -23,6 +23,8 @@
 ### 🤖 AI & Tools
 - **!ai** - Powered by Google's Gemini AI for intelligent conversations
 - **!image** - Generate stunning AI images using advanced models
+- **!animeimg** - Create anime-style images from text prompts using HuggingFace
+- **!anime** - Find anime details and information from MyAnimeList
 - **!vision** - Analyze images with Gemini Vision AI (reply to an image)
 - **!analyzevideo** - Extract insights from videos using frame-by-frame analysis
 - **!videogen** - Create true AI videos from text prompts (requires Replicate billing setup)
@@ -45,6 +47,7 @@
   - **!riddleanswer** - Reveal riddle answers
 - **!ascii** - Create ASCII art masterpieces
 - **!aesthetic** - Generate aesthetic text styles
+- **!<character>** - Get random anime character images (e.g., !naruto, !goku)
 
 ### 📚 Knowledge & Information
 - **!weather** - Real-time weather updates with detailed info
@@ -121,6 +124,7 @@
 - API Keys:
   - Google Gemini AI (for chat and vision features)
   - Replicate API (for video generation, requires payment method setup)
+  - HuggingFace API (for anime image generation)
   - OpenWeatherMap
   - News API
   - Image Generation API
