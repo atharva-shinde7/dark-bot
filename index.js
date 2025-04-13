@@ -27,7 +27,7 @@ const { generateVideoFromPrompt } = require('./lib/videogen');
 const getAnimeImage = require('./lib/animeImage');
 const getAnimeCharacterImage = require('./lib/animeCharacter');
 require('dotenv').config();
-const getPinterestImage = require("./lib/imagechar");
+
 
 
 // Message cache to store recent messages
@@ -1200,18 +1200,6 @@ const startBot = async () => {
                 }
             }
             
-            if (body.startsWith("!marvel ")) {
-                const character = body.slice(8).trim();
-                const img = await getPinterestImage(`${character} marvel`);
-              
-                await sock.sendMessage(
-                  msg.key.remoteJid,
-                  img
-                    ? { image: { url: img }, caption: `Here's a random Marvel image of ${character}` }
-                    : { text: `Couldn't find any Marvel image for "${character}" 😢` },
-                  { quoted: msg }
-                );
-            }
             
             // Handle character names beginning with exclamation mark (!)
         } catch (error) {
