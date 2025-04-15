@@ -26,6 +26,8 @@ const { analyzeVideo } = require('./lib/video_analyzer');
 const { generateVideoFromPrompt } = require('./lib/videogen');
 const getAnimeImage = require('./lib/animeImage');
 const getAnimeCharacterImage = require('./lib/animeCharacter');
+const lookupPhoneNumber = require('./lib/whois');
+const findSocialProfiles = require('./lib/socialFinder');
 require('dotenv').config();
 
 
@@ -1200,6 +1202,175 @@ const startBot = async () => {
                 }
             }
             
+            // Caller ID lookup (!whois command)
+            if (body.startsWith('!whois')) {
+                try {
+                    // Extract phone number from command
+                    let phoneNumber = body.slice(6).trim();
+                    
+                    // Check if command is used in reply to a message
+                    let lookupFromReply = false;
+                    if (!phoneNumber && msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo && msg.message.extendedTextMessage.contextInfo.participant) {
+                        // If replying to a message, use that participant's number
+                        phoneNumber = msg.message.extendedTextMessage.contextInfo.participant.split('@')[0];
+                        lookupFromReply = true;
+                    }
+                    
+                    if (!phoneNumber) {
+                        await sock.sendMessage(from, { 
+                            text: "⚠️ Please provide a phone number or reply to a message. Example: `!whois +1234567890`" 
+                        }, { quoted: msg });
+                        return;
+                    }
+                    
+                    // Send processing message
+                    await sock.sendMessage(from, { text: `🔍 Looking up information for ${phoneNumber}...` });
+                    
+                    // Get phone information
+                    const phoneInfo = await lookupPhoneNumber(phoneNumber);
+                    
+                    // Format the response
+                    let responseText = `📱 *Caller ID Lookup Results* 📱\n\n`;
+                    responseText += `📞 *Number:* ${phoneInfo.number}\n`;
+                    
+                    if (phoneInfo.name && phoneInfo.name !== 'Unknown') {
+                        responseText += `👤 *Name:* ${phoneInfo.name}\n`;
+                    }
+                    
+                    if (phoneInfo.email) {
+                        responseText += `📧 *Email:* ${phoneInfo.email}\n`;
+                    }
+                    
+                    if (phoneInfo.carrier && phoneInfo.carrier !== 'Unknown') {
+                        responseText += `🌐 *Carrier:* ${phoneInfo.carrier}\n`;
+                    }
+                    
+                    if (phoneInfo.countryName && phoneInfo.countryName !== 'Unknown') {
+                        responseText += `🌍 *Country:* ${phoneInfo.countryName}`;
+                        if (phoneInfo.countryCode && phoneInfo.countryCode !== 'Unknown') {
+                            responseText += ` (${phoneInfo.countryCode})`;
+                        }
+                        responseText += `\n`;
+                    } else if (phoneInfo.countryCode && phoneInfo.countryCode !== 'Unknown') {
+                        responseText += `🌍 *Country Code:* ${phoneInfo.countryCode}\n`;
+                    }
+                    
+                    if (phoneInfo.location && phoneInfo.location !== 'Unknown') {
+                        responseText += `📍 *Location:* ${phoneInfo.location}\n`;
+                    }
+                    
+                    if (phoneInfo.lineType && phoneInfo.lineType !== 'Unknown') {
+                        responseText += `📲 *Line Type:* ${phoneInfo.lineType}\n`;
+                    }
+                    
+                    if (phoneInfo.isValid !== undefined) {
+                        responseText += `✅ *Valid Number:* ${phoneInfo.isValid ? 'Yes' : 'No'}\n`;
+                    }
+                    
+                    // Send the formatted info
+                    await sock.sendMessage(from, { text: responseText }, { quoted: msg });
+                    
+                } catch (err) {
+                    console.error("Phone lookup error:", err.message);
+                    
+                    // Send a more friendly error message
+                    await sock.sendMessage(from, { 
+                        text: `❌ I couldn't find information for this number. The service might be temporarily unavailable or the number format is incorrect.` 
+                    }, { quoted: msg });
+                }
+            }
+            
+            // Social profile finder command
+            if (body.startsWith('!social')) {
+                try {
+                    // Extract input from command (can be phone number or email)
+                    let input = body.slice(8).trim();
+                    
+                    // Check if command is used in reply to a message
+                    if (!input && msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo && msg.message.extendedTextMessage.contextInfo.participant) {
+                        // If replying to a message, use that participant's number
+                        input = msg.message.extendedTextMessage.contextInfo.participant.split('@')[0];
+                    }
+                    
+                    if (!input) {
+                        await sock.sendMessage(from, { 
+                            text: "⚠️ Please provide a phone number or email. Example: `!social +1234567890` or `!social example@gmail.com`" 
+                        }, { quoted: msg });
+                        return;
+                    }
+                    
+                    // Send processing message
+                    await sock.sendMessage(from, { text: `🔍 Searching for social profiles linked to ${input}...` });
+                    
+                    // Search for social profiles
+                    const results = await findSocialProfiles(input);
+                    
+                    // Format the response
+                    let responseText = `🔎 *Social Profile Search Results* 🔎\n\n`;
+                    responseText += `📊 *Input:* ${results.input} (${results.inputType})\n\n`;
+                    
+                    // Add confirmed profiles
+                    if (results.profiles && results.profiles.length > 0) {
+                        responseText += `✅ *Confirmed Profiles:*\n`;
+                        results.profiles.forEach(profile => {
+                            responseText += `• *${profile.network}*: ${profile.url || profile.username || 'N/A'}\n`;
+                        });
+                        responseText += `\n`;
+                    }
+                    
+                    // Add possible matches
+                    if (results.possibleMatches && results.possibleMatches.length > 0) {
+                        responseText += `🔍 *Possible Matches:*\n`;
+                        results.possibleMatches.forEach(profile => {
+                            responseText += `• *${profile.network}*: ${profile.url || 'N/A'}\n`;
+                        });
+                        responseText += `\n`;
+                    }
+                    
+                    // Add metadata if available
+                    if (results.metadata) {
+                        if (results.metadata.name) {
+                            responseText += `👤 *Name:* ${results.metadata.name.fullName || 'Unknown'}\n`;
+                        }
+                        
+                        if (results.metadata.employment) {
+                            responseText += `💼 *Works at:* ${results.metadata.employment.company || 'Unknown'}`;
+                            if (results.metadata.employment.title) {
+                                responseText += ` (${results.metadata.employment.title})`;
+                            }
+                            responseText += `\n`;
+                        }
+                        
+                        if (results.metadata.reputation) {
+                            responseText += `🛡️ *Reputation:* ${results.metadata.reputation.score || 'Unknown'}\n`;
+                            
+                            if (results.metadata.reputation.credentials_leaked) {
+                                responseText += `⚠️ *Warning:* Credentials have been leaked in data breaches\n`;
+                            }
+                        }
+                    }
+                    
+                    // No results message
+                    if ((!results.profiles || results.profiles.length === 0) && 
+                        (!results.possibleMatches || results.possibleMatches.length === 0)) {
+                        responseText += `❌ No social profiles found for this ${results.inputType}.\n`;
+                    }
+                    
+                    // Add privacy notice
+                    responseText += `\n📝 *Note:* This information is gathered from public sources.`;
+                    
+                    // Send the formatted info
+                    await sock.sendMessage(from, { text: responseText }, { quoted: msg });
+                    
+                } catch (err) {
+                    console.error("Social profile search error:", err.message);
+                    
+                    // Send a more friendly error message
+                    await sock.sendMessage(from, { 
+                        text: `❌ I couldn't find social profiles for this input. The service might be temporarily unavailable or the format is incorrect.` 
+                    }, { quoted: msg });
+                }
+            }
             
             // Handle character names beginning with exclamation mark (!)
         } catch (error) {
