@@ -113,7 +113,7 @@
 
 4. **Start the bot**
    ```bash
-   npm start
+   node index.js
    ```
 
 ## 🔧 Requirements
